@@ -1,4 +1,4 @@
-# groupify
+# Groupify
 
 A new Flutter project.
 
