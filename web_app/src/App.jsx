@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import './App.css'
 
-const navItems = [['⌂', 'Home'], ['◈', 'Projects'], ['✓', 'Tasks'], ['◌', 'Activity']]
+const navItems = [['⌂', 'Home'], ['◈', 'Projects'], ['✓', 'Tasks'], ['◫', 'Meetings'], ['◌', 'Activity']]
 
 const defaultMembers = [
   { id: 'm1', name: 'Shruti Mehta', role: 'Product Lead', avatar: 'S', color: 'purple' },
@@ -115,6 +115,33 @@ const initialTasks = [
   },
 ]
 
+const initialMeetings = [
+  {
+    id: 'm1',
+    title: 'Sprint Sync & Architecture Review',
+    project: 'Smart Agriculture',
+    host: 'Shruti Mehta (Product Lead)',
+    hostAvatar: 'S',
+    time: 'Today, 4:00 PM - 4:45 PM',
+    dateLabel: 'Today',
+    link: 'https://meet.google.com/abc-defg-hij',
+    platform: 'Google Meet',
+    status: 'Live Soon'
+  },
+  {
+    id: 'm2',
+    title: 'Database Schema & Relational Model Sync',
+    project: 'Expense Tracker',
+    host: 'Rahul Sharma',
+    hostAvatar: 'R',
+    time: 'Tomorrow, 6:00 PM - 6:30 PM',
+    dateLabel: 'Tomorrow',
+    link: 'https://meet.google.com/xyz-9876-mno',
+    platform: 'Google Meet',
+    status: 'Upcoming'
+  }
+]
+
 function calculateDaysLeft(dueDateStr) {
   if (!dueDateStr) return 'N/A'
   const target = new Date(dueDateStr)
@@ -150,6 +177,7 @@ function App() {
   const [activeNav, setActiveNav] = useState('Home')
   const [projectsList, setProjectsList] = useState(initialProjects)
   const [tasks, setTasks] = useState(initialTasks)
+  const [meetingsList, setMeetingsList] = useState(initialMeetings)
   const [filter, setFilter] = useState('All')
   
   // Modals & Selection
@@ -158,6 +186,7 @@ function App() {
   const [showQuickAdd, setShowQuickAdd] = useState(false)
   const [showNewProjectModal, setShowNewProjectModal] = useState(false)
   const [showNewTaskModal, setShowNewTaskModal] = useState(false)
+  const [showNewMeetingModal, setShowNewMeetingModal] = useState(false)
   const [isWorkspaceTaskModal, setIsWorkspaceTaskModal] = useState(false)
   const [showAddMemberModal, setShowAddMemberModal] = useState(false)
   const [showAi, setShowAi] = useState(false)
@@ -176,6 +205,15 @@ function App() {
   const [newTaskDayOption, setNewTaskDayOption] = useState('Today')
   const [newTaskCustomDate, setNewTaskCustomDate] = useState('2026-09-15')
   const [newTaskTime, setNewTaskTime] = useState('18:00')
+
+  // Form State - Meeting (Link + Time)
+  const [newMeetingTitle, setNewMeetingTitle] = useState('')
+  const [newMeetingProject, setNewMeetingProject] = useState('')
+  const [newMeetingLink, setNewMeetingLink] = useState('https://meet.google.com/')
+  const [newMeetingDateOption, setNewMeetingDateOption] = useState('Today')
+  const [newMeetingCustomDate, setNewMeetingCustomDate] = useState('2026-09-15')
+  const [newMeetingTime, setNewMeetingTime] = useState('16:00')
+  const [newMeetingDuration, setNewMeetingDuration] = useState('30 mins')
 
   const [newMemberName, setNewMemberName] = useState('')
   const [newMemberRole, setNewMemberRole] = useState('Developer')
@@ -258,6 +296,48 @@ function App() {
     if (selectedProject) {
       setSelectedProject(prev => prev ? { ...prev } : null)
     }
+  }
+
+  // Schedule Meeting (Shared with Everyone)
+  const handleScheduleMeeting = (e) => {
+    e.preventDefault()
+    if (!newMeetingTitle.trim() || !newMeetingLink.trim()) return
+
+    const targetProjectName = newMeetingProject || selectedProject?.name || projectsList[0]?.name || 'Smart Agriculture'
+    let dayLabel = 'Today'
+    if (newMeetingDateOption === 'Tomorrow') {
+      dayLabel = 'Tomorrow'
+    } else if (newMeetingDateOption === 'Custom') {
+      dayLabel = formatDateDisplay(newMeetingCustomDate)
+    }
+
+    const formattedTime = formatTimeDisplay(newMeetingTime)
+    const timeDisplay = `${dayLabel}, ${formattedTime} (${newMeetingDuration})`
+
+    let formattedLink = newMeetingLink.trim()
+    if (!formattedLink.startsWith('http://') && !formattedLink.startsWith('https://')) {
+      formattedLink = 'https://' + formattedLink
+    }
+
+    const platform = formattedLink.includes('zoom') ? 'Zoom' : formattedLink.includes('teams') ? 'MS Teams' : 'Google Meet'
+
+    const newMeeting = {
+      id: Date.now().toString(),
+      title: newMeetingTitle.trim(),
+      project: targetProjectName,
+      host: 'Shruti Mehta (Product Lead)',
+      hostAvatar: 'S',
+      time: timeDisplay,
+      dateLabel: dayLabel,
+      link: formattedLink,
+      platform: platform,
+      status: 'Upcoming'
+    }
+
+    setMeetingsList([newMeeting, ...meetingsList])
+    setNewMeetingTitle('')
+    setShowNewMeetingModal(false)
+    setActiveNav('Meetings')
   }
 
   // Add Team Member to Project
@@ -350,13 +430,18 @@ function App() {
               key={label} 
               onClick={() => setActiveNav(label)}
             >
-              <span>{icon}</span>{label}<em>{label === 'Tasks' ? myUserTasks.length : label === 'Projects' ? projectsList.length : ''}</em>
+              <span>{icon}</span>{label}<em>{label === 'Tasks' ? myUserTasks.length : label === 'Projects' ? projectsList.length : label === 'Meetings' ? meetingsList.length : ''}</em>
             </button>
           ))}
         </nav>
         <div className="nav-label">WORKSPACE</div>
         <button className="nav-item"><span>▣</span>Files</button>
-        <button className="nav-item"><span>◫</span>Meetings</button>
+        <button 
+          className={activeNav === 'Meetings' ? 'nav-item active' : 'nav-item'}
+          onClick={() => setActiveNav('Meetings')}
+        >
+          <span>◫</span>Meetings <em>{meetingsList.length}</em>
+        </button>
         <button className="nav-item"><span>⌘</span>GitHub</button>
         <div className="sidebar-bottom">
           <button className="nav-item"><span>⚙</span>Settings</button>
@@ -486,6 +571,97 @@ function App() {
                         <span className={`priority-text ${task.priority.toLowerCase()}`}>{task.priority} Priority</span>
                       </div>
                       <span className="task-arrow">→</span>
+                    </div>
+                  ))
+                )}
+              </div>
+            </section>
+          ) : activeNav === 'Meetings' ? (
+            /* DEDICATED MEETINGS PAGE - VISIBLE TO EVERYONE! */
+            <section className="panel" style={{ background: '#0a1424', marginBottom: '40px' }}>
+              <div className="panel-heading" style={{ marginBottom: '24px' }}>
+                <div>
+                  <div className="section-kicker">TEAM SYNCS & LIVE CALLS</div>
+                  <h2 style={{ fontSize: '28px', margin: '4px 0 2px' }}>Team Meetings <span className="count-pill">{meetingsList.length}</span></h2>
+                  <p style={{ fontSize: '13px', color: '#687d98', margin: '0' }}>Shared meeting links visible to all workspace team members</p>
+                </div>
+                <button 
+                  className="primary-button" 
+                  style={{ padding: '9px 16px', fontSize: '12px' }}
+                  onClick={() => setShowNewMeetingModal(true)}
+                >
+                  + Schedule Meeting
+                </button>
+              </div>
+
+              <div style={{ display: 'grid', gap: '16px' }}>
+                {meetingsList.length === 0 ? (
+                  <p style={{ color: '#687c97', fontSize: '13px', textAlign: 'center', padding: '30px 0' }}>
+                    No meetings scheduled yet. Click "+ Schedule Meeting" to add a Google Meet or Zoom link for the team!
+                  </p>
+                ) : (
+                  meetingsList.map((m) => (
+                    <div 
+                      key={m.id} 
+                      style={{
+                        padding: '20px',
+                        borderRadius: '14px',
+                        background: 'linear-gradient(135deg, #0e1e35, #0a1322)',
+                        border: '1px solid #1e385c',
+                        display: 'flex',
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        gap: '16px',
+                        boxShadow: '0 4px 20px #0004'
+                      }}
+                    >
+                      <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
+                        <div 
+                          style={{
+                            width: '46px',
+                            height: '46px',
+                            borderRadius: '12px',
+                            background: '#163354',
+                            border: '1px solid #28548a',
+                            display: 'grid',
+                            placeItems: 'center',
+                            fontSize: '22px',
+                            color: '#55e0e6',
+                            flex: 'none'
+                          }}
+                        >
+                          🎥
+                        </div>
+                        <div style={{ display: 'grid', gap: '4px' }}>
+                          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                            <strong style={{ fontSize: '16px', color: '#fff' }}>{m.title}</strong>
+                            <span style={{ fontSize: '9px', background: '#19395e', color: '#6fcbf4', padding: '2px 8px', borderRadius: '10px', fontWeight: 'bold' }}>{m.project}</span>
+                            <span style={{ fontSize: '9px', background: '#194236', color: '#4cd39b', padding: '2px 8px', borderRadius: '10px', fontWeight: 'bold' }}>{m.platform}</span>
+                          </div>
+                          <span style={{ fontSize: '12px', color: '#879bb6' }}>
+                            Hosted by <strong>{m.host}</strong> · 🕒 {m.time}
+                          </span>
+                          <a 
+                            href={m.link} 
+                            target="_blank" 
+                            rel="noreferrer" 
+                            style={{ fontSize: '11px', color: '#4c9fff', textDecoration: 'none', wordBreak: 'break-all', marginTop: '2px' }}
+                          >
+                            🔗 {m.link}
+                          </a>
+                        </div>
+                      </div>
+
+                      <a 
+                        href={m.link} 
+                        target="_blank" 
+                        rel="noreferrer" 
+                        className="primary-button" 
+                        style={{ padding: '10px 18px', fontSize: '12px', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                      >
+                        Join Meeting ↗
+                      </a>
                     </div>
                   ))
                 )}
@@ -712,6 +888,116 @@ function App() {
         ))}
         <button onClick={() => setShowQuickAdd(true)}><span className="mobile-add">+</span>Create</button>
       </nav>
+
+      {/* SCHEDULE MEETING MODAL */}
+      {showNewMeetingModal && (
+        <div className="modal-backdrop" onClick={() => setShowNewMeetingModal(false)}>
+          <div className="quick-sheet" onClick={(event) => event.stopPropagation()}>
+            <div className="sheet-handle"></div>
+            <div className="section-kicker">SCHEDULE MEETING</div>
+            <h2>Schedule Team Call & Add Link</h2>
+            <form onSubmit={handleScheduleMeeting} style={{ display: 'grid', gap: '15px' }}>
+              <div>
+                <label style={{ fontSize: '10px', color: '#778ca7', display: 'block', marginBottom: '4px', fontWeight: 'bold' }}>MEETING TITLE</label>
+                <input 
+                  type="text" 
+                  placeholder="e.g. Sprint Review & Architecture Sync" 
+                  value={newMeetingTitle}
+                  onChange={(e) => setNewMeetingTitle(e.target.value)}
+                  autoFocus
+                  style={{ width: '100%', padding: '12px 14px', borderRadius: '9px', border: '1px solid #294365', background: '#091322', color: '#fff', fontSize: '14px', outline: 'none' }}
+                />
+              </div>
+
+              <div>
+                <label style={{ fontSize: '10px', color: '#778ca7', display: 'block', marginBottom: '4px', fontWeight: 'bold' }}>MEETING LINK (GOOGLE MEET / ZOOM)</label>
+                <input 
+                  type="text" 
+                  placeholder="e.g. https://meet.google.com/abc-defg-hij" 
+                  value={newMeetingLink}
+                  onChange={(e) => setNewMeetingLink(e.target.value)}
+                  style={{ width: '100%', padding: '12px 14px', borderRadius: '9px', border: '1px solid #294365', background: '#091322', color: '#fff', fontSize: '14px', outline: 'none' }}
+                />
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                <div>
+                  <label style={{ fontSize: '10px', color: '#778ca7', display: 'block', marginBottom: '4px', fontWeight: 'bold' }}>PROJECT</label>
+                  <select
+                    value={newMeetingProject}
+                    onChange={(e) => setNewMeetingProject(e.target.value)}
+                    style={{ width: '100%', padding: '12px 14px', borderRadius: '9px', border: '1px solid #294365', background: '#091322', color: '#fff', fontSize: '14px', outline: 'none' }}
+                  >
+                    {projectsList.map(p => (
+                      <option key={p.id || p.name} value={p.name}>{p.name}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label style={{ fontSize: '10px', color: '#778ca7', display: 'block', marginBottom: '4px', fontWeight: 'bold' }}>DURATION</label>
+                  <select
+                    value={newMeetingDuration}
+                    onChange={(e) => setNewMeetingDuration(e.target.value)}
+                    style={{ width: '100%', padding: '12px 14px', borderRadius: '9px', border: '1px solid #294365', background: '#091322', color: '#fff', fontSize: '14px', outline: 'none' }}
+                  >
+                    <option value="30 mins">30 mins</option>
+                    <option value="45 mins">45 mins</option>
+                    <option value="1 hour">1 hour</option>
+                    <option value="1.5 hours">1.5 hours</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* DATE & TIME SELECTOR */}
+              <div style={{ border: '1px solid #1c3352', borderRadius: '12px', padding: '14px', background: '#091324' }}>
+                <label style={{ fontSize: '10px', color: '#7697bf', display: 'block', marginBottom: '8px', fontWeight: 'bold', letterSpacing: '1px' }}>
+                  MEETING DATE & TIME
+                </label>
+                
+                <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '10px' }}>
+                  <div>
+                    <label style={{ fontSize: '9px', color: '#687c97', display: 'block', marginBottom: '3px' }}>MEETING DATE</label>
+                    <select
+                      value={newMeetingDateOption}
+                      onChange={(e) => setNewMeetingDateOption(e.target.value)}
+                      style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #294365', background: '#0c1a2d', color: '#fff', fontSize: '13px', outline: 'none', marginBottom: newMeetingDateOption === 'Custom' ? '8px' : '0' }}
+                    >
+                      <option value="Today">Today</option>
+                      <option value="Tomorrow">Tomorrow</option>
+                      <option value="Custom">Custom Date...</option>
+                    </select>
+
+                    {newMeetingDateOption === 'Custom' && (
+                      <input 
+                        type="date"
+                        value={newMeetingCustomDate}
+                        onChange={(e) => setNewMeetingCustomDate(e.target.value)}
+                        style={{ width: '100%', padding: '9px', borderRadius: '8px', border: '1px solid #294365', background: '#0c1a2d', color: '#fff', fontSize: '13px', outline: 'none' }}
+                      />
+                    )}
+                  </div>
+
+                  <div>
+                    <label style={{ fontSize: '9px', color: '#687c97', display: 'block', marginBottom: '3px' }}>START TIME</label>
+                    <input 
+                      type="time"
+                      value={newMeetingTime}
+                      onChange={(e) => setNewMeetingTime(e.target.value)}
+                      style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #294365', background: '#0c1a2d', color: '#fff', fontSize: '13px', outline: 'none' }}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '10px' }}>
+                <button type="button" className="ghost-button" style={{ padding: '10px 16px', color: '#91a3bb', background: 'none', border: 0, cursor: 'pointer' }} onClick={() => setShowNewMeetingModal(false)}>Cancel</button>
+                <button type="submit" className="primary-button">Publish Meeting Link</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* PROJECT WORKSPACE MODAL */}
       {selectedProject && (
@@ -954,7 +1240,7 @@ function App() {
               <button onClick={() => { setShowQuickAdd(false); setShowNewProjectModal(true); }}>
                 <span>◈</span>New project
               </button>
-              <button onClick={() => setShowQuickAdd(false)}>
+              <button onClick={() => { setShowQuickAdd(false); setShowNewMeetingModal(true); }}>
                 <span>◷</span>Schedule meeting
               </button>
               <button onClick={() => setShowQuickAdd(false)}>
