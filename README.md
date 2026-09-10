@@ -1,21 +1,10 @@
-<<<<<<< HEAD
-# groupify
-
-A new Flutter project.
-
-## Getting Started
-
-This project is a starting point for a Flutter application.
-
-A few resources to get you started if this is your first Flutter project:
-
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
-
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
-=======
 # Groupify
->>>>>>> origin/main
+
+Groupify is a collaborative project management and student group study platform designed for tracking tasks, projects, team activity, and AI priorities.
+
+## Features
+- **Project Workspace**: Manage team projects, deadlines, and task breakdown.
+- **Task Management**: Prioritize tasks and track real-time progress.
+- **Team Activity**: Live pulse on member updates and file contributions.
+- **AI Priorities**: Smart insights on next steps and upcoming risk areas.
+

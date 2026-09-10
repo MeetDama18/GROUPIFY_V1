@@ -5,8 +5,11 @@ import '../../theme/app_theme.dart';
 import '../../widgets/project_card.dart';
 import 'project_workspace_screen.dart';
 
+import '../../models/project_model.dart';
+
 class ProjectsScreen extends StatelessWidget {
-  const ProjectsScreen({super.key});
+  final List<dynamic>? projects;
+  const ProjectsScreen({super.key, this.projects});
 
   @override
   Widget build(BuildContext context) {
@@ -60,14 +63,32 @@ class ProjectsScreen extends StatelessWidget {
           const SizedBox(height: 18),
           const Text('My Projects', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w800, color: AppTheme.text)),
           const SizedBox(height: 14),
-          ...MockData.projects.map((project) => ProjectCard(
-            project: project,
-            onTap: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => ProjectWorkspaceScreen(project: project)),
-              );
-            },
-          )),
+          ...(projects ?? MockData.projects).map((project) {
+            final pModel = project is ProjectModel
+                ? project
+                : ProjectModel(
+                    id: project['id'] ?? '',
+                    name: project['name'] ?? '',
+                    description: 'Custom created project',
+                    category: project['category'] ?? 'College',
+                    status: project['status'] ?? 'On Track',
+                    deadlineLabel: project['deadlineLabel'] ?? 'Soon',
+                    progress: (project['progress'] as num?)?.toDouble() ?? 0.0,
+                    completedTasks: 0,
+                    totalTasks: 5,
+                    teamSize: 1,
+                    members: [MockData.currentUser],
+                  );
+            return ProjectCard(
+              project: pModel,
+              onTap: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => ProjectWorkspaceScreen(project: pModel)),
+                );
+              },
+            );
+          }),
+
         ],
       ),
     );

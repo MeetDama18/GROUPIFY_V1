@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../../data/mock_data.dart';
+import '../../models/project_model.dart';
+import '../../models/task_model.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/bottom_nav_bar.dart';
 import '../../widgets/project_card.dart';
@@ -18,25 +20,252 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   int _selectedIndex = 0;
 
-  late final _pages = [
-    _HomeTab(),
-    const ProjectsScreen(),
-    _PlaceholderPage(label: 'Create'),
-    _PlaceholderPage(label: 'Tasks'),
-    _PlaceholderPage(label: 'AI'),
-  ];
+  // Lifted state so changes persist and reflect across tabs
+  late List<dynamic> _projectsList = List.from(MockData.projects);
+  late List<dynamic> _tasksList = List.from(MockData.tasks);
+
+  // 1. Show the Quick Add bottom sheet
+  void _showQuickAddSheet() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (BuildContext context) {
+        return Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: AppTheme.panelSoft,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+            border: Border.all(color: Colors.white12),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.white24,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              const Text('QUICK ADD', style: TextStyle(color: AppTheme.textMuted, fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 1.2)),
+              const SizedBox(height: 8),
+              const Text('What are we building?', style: TextStyle(color: AppTheme.text, fontSize: 22, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 20),
+              
+              // Grid of 4 options
+              GridView.count(
+                crossAxisCount: 2,
+                shrinkWrap: true,
+                crossAxisSpacing: 12,
+                mainAxisSpacing: 12,
+                childAspectRatio: 2.2,
+                physics: const NeverScrollableScrollPhysics(),
+                children: [
+                  _QuickAddButton(
+                    icon: Icons.add,
+                    label: 'New task',
+                    onTap: () {
+                      Navigator.pop(context);
+                      _showTaskInputDialog();
+                    },
+                  ),
+                  _QuickAddButton(
+                    icon: Icons.diamond_outlined,
+                    label: 'New project',
+                    onTap: () {
+                      Navigator.pop(context); // Close the quick add sheet
+                      _showProjectNameInputDialog(); // Open text input dialog
+                    },
+                  ),
+                  _QuickAddButton(
+                    icon: Icons.schedule_rounded,
+                    label: 'Schedule meeting',
+                    onTap: () {
+                      Navigator.pop(context);
+                    },
+                  ),
+                  _QuickAddButton(
+                    icon: Icons.note_alt_outlined,
+                    label: 'Add note',
+                    onTap: () {
+                      Navigator.pop(context);
+                    },
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  // 2. Open text input dialog to write the project name
+  void _showProjectNameInputDialog() {
+    final TextEditingController nameController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          backgroundColor: AppTheme.panelSoft,
+          title: const Text('Name your new project', style: TextStyle(color: AppTheme.text)),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: nameController,
+                style: const TextStyle(color: AppTheme.text),
+                decoration: const InputDecoration(
+                  hintText: 'e.g. Smart Architecture',
+                  hintStyle: TextStyle(color: AppTheme.textMuted),
+                  enabledBorder: UnderlineInputBorder(
+                    borderSide: BorderSide(color: AppTheme.accent),
+                  ),
+                  focusedBorder: UnderlineInputBorder(
+                    borderSide: BorderSide(color: AppTheme.accent),
+                  ),
+                ),
+                autofocus: true,
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              child: const Text('Cancel', style: TextStyle(color: AppTheme.textMuted)),
+              onPressed: () => Navigator.of(context).pop(),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: AppTheme.accent),
+              child: const Text('Submit & Create', style: TextStyle(color: Colors.white)),
+              onPressed: () {
+                if (nameController.text.trim().isNotEmpty) {
+                  setState(() {
+                    final newProject = ProjectModel(
+                      id: DateTime.now().millisecondsSinceEpoch.toString(),
+                      name: nameController.text.trim(),
+                      description: 'Newly created project',
+                      category: 'College',
+                      status: 'On Track',
+                      deadlineLabel: '30 Sept',
+                      progress: 0.0,
+                      completedTasks: 0,
+                      totalTasks: 5,
+                      teamSize: 1,
+                      members: [MockData.currentUser],
+                    );
+                    _projectsList.insert(0, newProject);
+                    _selectedIndex = 1; // Switch to Projects tab (index 1) to see it
+                  });
+                  Navigator.of(context).pop();
+                }
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  // 3. Open task input dialog
+  void _showTaskInputDialog() {
+    final TextEditingController taskController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          backgroundColor: AppTheme.panelSoft,
+          title: const Text('Add new task', style: TextStyle(color: AppTheme.text)),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: taskController,
+                style: const TextStyle(color: AppTheme.text),
+                decoration: const InputDecoration(
+                  hintText: 'e.g. Finish API integration',
+                  hintStyle: TextStyle(color: AppTheme.textMuted),
+                  enabledBorder: UnderlineInputBorder(
+                    borderSide: BorderSide(color: AppTheme.accent),
+                  ),
+                  focusedBorder: UnderlineInputBorder(
+                    borderSide: BorderSide(color: AppTheme.accent),
+                  ),
+                ),
+                autofocus: true,
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              child: const Text('Cancel', style: TextStyle(color: AppTheme.textMuted)),
+              onPressed: () => Navigator.of(context).pop(),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: AppTheme.accent),
+              child: const Text('Add Task', style: TextStyle(color: Colors.white)),
+              onPressed: () {
+                if (taskController.text.trim().isNotEmpty) {
+                  setState(() {
+                    final newTask = TaskModel(
+                      id: DateTime.now().millisecondsSinceEpoch.toString(),
+                      title: taskController.text.trim(),
+                      projectId: 'project-1',
+                      projectName: 'General Work',
+                      assignedMemberId: 'shruti',
+                      priority: 'High',
+                      status: 'To Do',
+                      dueLabel: 'Today',
+                      estimatedHours: 2,
+                      description: 'Newly created task',
+                    );
+                    _tasksList.insert(0, newTask);
+                  });
+                  Navigator.of(context).pop();
+                }
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
+    final pages = [
+      _HomeTab(
+        projects: _projectsList,
+        tasks: _tasksList,
+        onCreateProjectTap: _showQuickAddSheet,
+      ),
+      ProjectsScreen(projects: _projectsList),
+      const _PlaceholderPage(label: 'Create'),
+      const _PlaceholderPage(label: 'Tasks'),
+      const _PlaceholderPage(label: 'AI'),
+    ];
+
     return Scaffold(
       backgroundColor: AppTheme.background,
       body: SafeArea(
-        child: _pages[_selectedIndex],
+        child: pages[_selectedIndex == 2 ? 0 : _selectedIndex],
       ),
       bottomNavigationBar: BottomNavBar(
         currentIndex: _selectedIndex,
         onTap: (index) {
-          setState(() => _selectedIndex = index);
+          if (index == 2) {
+            _showQuickAddSheet();
+          } else {
+            setState(() => _selectedIndex = index);
+          }
         },
       ),
     );
@@ -44,6 +273,16 @@ class _HomeScreenState extends State<HomeScreen> {
 }
 
 class _HomeTab extends StatelessWidget {
+  final List<dynamic> projects;
+  final List<dynamic> tasks;
+  final VoidCallback onCreateProjectTap;
+
+  const _HomeTab({
+    required this.projects,
+    required this.tasks,
+    required this.onCreateProjectTap,
+  });
+
   @override
   Widget build(BuildContext context) {
     return SingleChildScrollView(
@@ -108,10 +347,10 @@ class _HomeTab extends StatelessWidget {
           ),
           const SizedBox(height: 20),
           Row(
-            children: const [
-              Expanded(child: _StatChip(value: '6', label: 'Projects')),
-              Expanded(child: _StatChip(value: '12', label: 'Tasks')),
-              Expanded(child: _StatChip(value: '3', label: 'Due soon')),
+            children: [
+              Expanded(child: _StatChip(value: '${projects.length}', label: 'Projects')),
+              Expanded(child: _StatChip(value: '${tasks.length}', label: 'Tasks')),
+              const Expanded(child: _StatChip(value: '3', label: 'Due soon')),
             ],
           ),
           const SizedBox(height: 22),
@@ -138,7 +377,7 @@ class _HomeTab extends StatelessWidget {
                   children: [
                     Expanded(
                       child: ElevatedButton(
-                        onPressed: () {},
+                        onPressed: onCreateProjectTap,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppTheme.accent,
                           foregroundColor: Colors.white,
@@ -178,18 +417,55 @@ class _HomeTab extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 10),
-          ...MockData.tasks.take(4).map((task) => TaskCard(task: task, compact: true)),
+          ...tasks.take(4).map((task) => TaskCard(task: task is TaskModel ? task : TaskModel(
+            id: task['id'] ?? '1',
+            title: task['title'] ?? '',
+            projectId: 'p1',
+            projectName: 'Project',
+            assignedMemberId: 'shruti',
+            priority: 'High',
+            status: 'To Do',
+            dueLabel: 'Today',
+            estimatedHours: 2,
+            description: '',
+          ), compact: true)),
           const SizedBox(height: 20),
-          const Text('Active projects', style: TextStyle(color: AppTheme.textMuted, fontWeight: FontWeight.w800, letterSpacing: 1.2)),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text('Active projects', style: TextStyle(color: AppTheme.textMuted, fontWeight: FontWeight.w800, letterSpacing: 1.2)),
+              IconButton(
+                icon: const Icon(Icons.add_circle_outline, color: AppTheme.accent),
+                onPressed: onCreateProjectTap,
+              ),
+            ],
+          ),
           const SizedBox(height: 10),
-          ...MockData.projects.take(3).map((project) => ProjectCard(
-            project: project,
-            onTap: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => ProjectWorkspaceScreen(project: project)),
-              );
-            },
-          )),
+          ...projects.take(4).map((project) {
+            final pModel = project is ProjectModel
+                ? project
+                : ProjectModel(
+                    id: project['id'] ?? '',
+                    name: project['name'] ?? '',
+                    description: 'Custom created project',
+                    category: project['category'] ?? 'College',
+                    status: project['status'] ?? 'On Track',
+                    deadlineLabel: project['deadlineLabel'] ?? 'Soon',
+                    progress: (project['progress'] as num?)?.toDouble() ?? 0.0,
+                    completedTasks: 0,
+                    totalTasks: 5,
+                    teamSize: 1,
+                    members: [MockData.currentUser],
+                  );
+            return ProjectCard(
+              project: pModel,
+              onTap: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => ProjectWorkspaceScreen(project: pModel)),
+                );
+              },
+            );
+          }),
         ],
       ),
     );
@@ -230,6 +506,42 @@ class _PlaceholderPage extends StatelessWidget {
       child: Text(
         label,
         style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w800, color: AppTheme.text),
+      ),
+    );
+  }
+}
+
+class _QuickAddButton extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  const _QuickAddButton({required this.icon, required this.label, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.03),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.white.withOpacity(0.08)),
+        ),
+        child: Row(
+          children: [
+            Icon(icon, color: AppTheme.accent, size: 20),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                label,
+                style: const TextStyle(color: AppTheme.text, fontWeight: FontWeight.w600, fontSize: 13),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
